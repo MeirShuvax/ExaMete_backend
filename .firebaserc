@@ -1,0 +1,10 @@
+{
+  "projects": {
+    "default": "exammate-6aebc",
+    "ExaMate": "exammate-6aebc",
+    "exammate-6aebc": "exammate-6aebc"
+  },
+  "targets": {},
+  "etags": {},
+  "dataconnectEmulatorConfig": {}
+}
