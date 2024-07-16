@@ -2,6 +2,9 @@ const functions = require("firebase-functions");
 const admin = require("./firebaseAdmin");
 const validations = require("./utils/validations");
 
+//* *******************************************************
+//                     get Student By Id
+//* *******************************************************
 exports.getStudentById = functions.https.onCall((data, context) => {
   const {studentId} = data;
 
@@ -19,6 +22,9 @@ exports.getStudentById = functions.https.onCall((data, context) => {
       });
 });
 
+//* *******************************************************
+//                    get Student Alerts
+//* *******************************************************
 exports.getStudentAlerts = functions.https.onCall((data, context) => {
   if (!context.auth) {
     throw new functions.https
@@ -42,6 +48,9 @@ exports.getStudentAlerts = functions.https.onCall((data, context) => {
       });
 });
 
+//* *******************************************************
+//                    add Alert ToStudent
+//* *******************************************************
 exports.addAlertToStudent = functions.https.onCall((data, context) => {
   if (!context.auth) {
     throw new functions.https
@@ -65,6 +74,10 @@ exports.addAlertToStudent = functions.https.onCall((data, context) => {
       });
 });
 
+
+//* *******************************************************
+//                     set Student Status
+//* *******************************************************
 exports.setStudentStatus = functions.https.onRequest((req, res) => {
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
@@ -89,12 +102,17 @@ exports.setStudentStatus = functions.https.onRequest((req, res) => {
           return res.status(404).send("Student not found");
         }
 
+        const studentData = doc.data();
+        const studentFullName =
+        `${studentData.firstName} ${studentData.lastName}`;
+        const fullStatusNote = `${studentFullName} ${statusNote}`;
+
         const updates = {ok};
 
         if (statusNote) {
           const noteRef = studentDocRef.collection("Notes").doc();
           updates.statusNote = {
-            note: statusNote,
+            note: fullStatusNote,
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
           };
           noteRef.set(updates.statusNote);
@@ -106,7 +124,7 @@ exports.setStudentStatus = functions.https.onRequest((req, res) => {
                 student ${studentId} to OK = ${ok}`);
               return res.status(200).json({
                 result: `Student ${studentId} set to OK = ${ok}`,
-                statusNote: statusNote || null,
+                statusNote: fullStatusNote || null,
               });
             });
       })
@@ -115,6 +133,11 @@ exports.setStudentStatus = functions.https.onRequest((req, res) => {
         return res.status(500).send(error.message);
       });
 });
+
+
+//* *******************************************************
+//                    disconnect Class
+//* *******************************************************
 
 exports.disconnectClass = functions.https.onRequest((req, res) => {
   if (req.method !== "POST") {
@@ -166,6 +189,9 @@ exports.disconnectClass = functions.https.onRequest((req, res) => {
       });
 });
 
+//* *******************************************************
+//                    get Connected Students
+//* *******************************************************
 exports.getConnectedStudents = functions.https.onRequest((req, res) => {
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
@@ -211,3 +237,5 @@ exports.getConnectedStudents = functions.https.onRequest((req, res) => {
         return res.status(500).send("Failed to get connected students.");
       });
 });
+//* *******************************************************
+//* *******************************************************

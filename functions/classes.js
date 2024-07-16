@@ -1,7 +1,15 @@
 const functions = require("firebase-functions");
 const admin = require("./firebaseAdmin");
 const validations = require("./utils/validations");
+// const students = require("./students");
+
+
 // const {deleteFilesInFolder} = require("./utils/storage");
+
+
+//* *************************************************
+//                    create New Class
+//* *************************************************
 const {v4: uuidv4} = require("uuid");
 
 exports.createNewClass = functions.https.onRequest((req, res) => {
@@ -62,6 +70,9 @@ exports.createNewClass = functions.https.onRequest((req, res) => {
       });
 });
 
+//* *************************************************
+//                    join Class
+//* *************************************************
 exports.joinClass = functions.https.onRequest((req, res) => {
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
@@ -109,6 +120,10 @@ exports.joinClass = functions.https.onRequest((req, res) => {
       });
 });
 
+//* *************************************************
+//                    get Class Details
+//* *************************************************
+
 exports.getClassDetails = functions.https.onRequest((req, res) => {
   if (req.method !== "GET") {
     return res.status(405).send("Method Not Allowed");
@@ -133,6 +148,9 @@ exports.getClassDetails = functions.https.onRequest((req, res) => {
       });
 });
 
+//* *************************************************
+//                    get Class Comments
+//* *************************************************
 exports.getClassComments = functions.https.onRequest(async (req, res) => {
   const {classId} = req.body;
 
@@ -181,6 +199,9 @@ exports.getClassComments = functions.https.onRequest(async (req, res) => {
   }
 });
 
+//* *************************************************
+//                    edit Class
+//* *************************************************
 exports.editClass = functions.https.onRequest((req, res) => {
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
@@ -202,7 +223,7 @@ exports.editClass = functions.https.onRequest((req, res) => {
   }
 
   if (!name || typeof openMaterial !== "boolean" || !testDate ||
-   !testStartTime || typeof testTimeHours !== "number" ||
+    !testStartTime || typeof testTimeHours !== "number" ||
     typeof testTimeMinutes !== "number") {
     return res.status(400).send("All fields are required for updating.");
   }
@@ -252,6 +273,9 @@ exports.editClass = functions.https.onRequest((req, res) => {
       });
 });
 
+//* *************************************************
+//                    convertAaToBb
+//* *************************************************
 exports.convertAaToBb = functions.https.onRequest((req, res) => {
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
@@ -267,6 +291,10 @@ exports.convertAaToBb = functions.https.onRequest((req, res) => {
 
   return res.status(200).json(result);
 });
+
+//* *************************************************
+//                    upload Class Document
+//* *************************************************
 
 const Busboy = require("busboy");
 const {log} = require("console");
@@ -331,46 +359,5 @@ exports.uploadClassDocument = functions.https.onRequest((req, res) => {
   });
 });
 
-const formidable = require("formidable");
+//* *************************************************
 
-exports.abc = functions
-    .runWith({timeoutSeconds: 120}).https.onRequest((req, res) => {
-      if (req.method !== "POST") {
-        return res.status(405).send("Method Not Allowed");
-      }
-
-      const form = new formidable.IncomingForm();
-      form.uploadDir = require("os").tmpdir();
-
-      form.parse(req, async (err, fields, files) => {
-        if (err) {
-          console.error("Form parsing error:", err);
-          return res.status(500).send("Form parsing error: " + err.message);
-        }
-
-        if (!files.file) {
-          return res.status(400).send("No file uploaded.");
-        }
-
-        const file = files.file;
-        console.info("Uploading file: " + file.name);
-        const tempFilePath = file.path;
-        const bucket = admin.storage().bucket();
-        const destination = `uploads/${file.name}`;
-
-        try {
-          await bucket.upload(tempFilePath, {
-            destination: destination,
-            metadata: {
-              contentType: file.type,
-            },
-          });
-
-          require("fs").unlinkSync(tempFilePath);
-          return res.status(200).send("File uploaded successfully.");
-        } catch (uploadErr) {
-          console.error("Failed to upload file:", uploadErr);
-          return res.status(500).send("Upload failed: " + uploadErr.message);
-        }
-      });
-    });

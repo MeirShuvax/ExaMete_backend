@@ -1,2 +1,5 @@
 node_modules/
+
+echo "exammate-6aebc-firebase-adminsdk-fhn2x-010f7cf1dd.json" >> .gitignore
+
 *.local

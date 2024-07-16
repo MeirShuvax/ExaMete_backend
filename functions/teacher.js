@@ -4,6 +4,9 @@ const {deleteFilesInFolder} = require("./utils/storage");
 const validations = require("./utils/validations");
 
 
+//* *******************************************************
+//                    delete Class
+//* *******************************************************
 exports.deleteClass = functions.https.onRequest(async (req, res) => {
   if (req.method !== "POST") {
     return res.status(405).send("Method Not Allowed");
@@ -38,6 +41,10 @@ exports.deleteClass = functions.https.onRequest(async (req, res) => {
     return res.status(500).send("Failed to delete class.");
   }
 });
+
+//* *******************************************************
+//                   delete Classes By Teacher
+//* *******************************************************
 
 exports.deleteClassesByTeacher = functions.https
     .onRequest(async (req, res) => {
@@ -83,33 +90,9 @@ exports.deleteClassesByTeacher = functions.https
       }
     });
 
-// exports.getMyClasses = functions.https.onRequest((req, res) => {
-//   if (req.method !== "GET") {
-//     return res.status(405).send("Method Not Allowed");
-//   }
-
-//   const {userId} = req.query;
-
-//   if (!userId) {
-//     return res.status(400).send("userId is required.");
-//   }
-
-//   return admin.firestore().collection("classes")
-//       .where("teacherId", "==", userId)
-//       .get()
-//       .then((querySnapshot) => {
-//         const classes = [];
-//         querySnapshot.forEach((doc) => {
-//           classes.push({classId: doc.id, ...doc.data()});
-//         });
-//         return res.status(200).json({classes});
-//       })
-//       .catch((error) => {
-//         console.error("Error getting classes:", error);
-//         return res.status(500).send(error.message);
-//       });
-// });
-
+//* *******************************************************
+//                    get Classes By Id
+//* *******************************************************
 
 exports.getClassesById = functions.https.onRequest((req, res) => {
   if (req.method !== "POST") {
@@ -143,3 +126,78 @@ exports.getClassesById = functions.https.onRequest((req, res) => {
         return res.status(500).send(error.message);
       });
 });
+
+
+//* *******************************************************
+//                    get New Updates
+//* *******************************************************
+exports.getNewUpdates = functions.https.onRequest((req, res) => {
+  if (req.method !== "POST") {
+    return res.status(405).send("Method Not Allowed");
+  }
+
+  const {teacherId, classId} = req.body;
+
+  if (!teacherId || !classId) {
+    return res.status(400).send("teacherId and classId are required.");
+  }
+
+  // Verify the teacher ID
+  if (!validations.verifyTeacherId(teacherId)) {
+    return res.status(400).send("Invalid teacherId.");
+  }
+
+  const classRef = admin.firestore().collection("classes").doc(classId);
+
+  return classRef.get()
+      .then((classDoc) => {
+        if (!classDoc.exists) {
+          return res.status(404).send("Class not found.");
+        }
+
+        if (classDoc.data().teacherId !== teacherId) {
+          return res.status(403)
+              .send("Permission denied. Teacher ID does not match.");
+        }
+
+        return classRef.collection("students").get()
+            .then(async (studentsSnapshot) => {
+              const updates = [];
+
+              const updatePromises = studentsSnapshot
+                  .docs.map(async (studentDoc) => {
+                    const studentData = studentDoc.data();
+                    const notesSnapshot = await studentDoc.ref
+                        .collection("Notes")
+                        .orderBy("timestamp", "desc")
+                        .get();
+
+                    notesSnapshot.forEach((noteDoc) => {
+                      const noteData = noteDoc.data();
+                      if (noteData.updatedToTeacher != true) {
+                        updates.push({
+                          studentId: studentDoc.id,
+                          studentDetails: studentData,
+                          note: noteData,
+                        });
+                        // Update the note to mark it as updated to the teacher
+                        noteDoc.ref.update({updatedToTeacher: true});
+                      }
+                    });
+                  });
+
+              await Promise.all(updatePromises);
+
+              updates.sort((a, b) => b.note.timestamp
+                  .toDate() - a.note.timestamp.toDate());
+
+              return res.status(200).json({updates});
+            });
+      })
+      .catch((error) => {
+        console.error("Error getting new updates:", error);
+        return res.status(500).send("Failed to get new updates.");
+      });
+});
+//* *******************************************************
+//* *******************************************************
